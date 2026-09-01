@@ -1,0 +1,65 @@
+name: Terraform
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# 'id-token: write' is what allows THIS workflow run to request a signed
+# OIDC token from GitHub to present to AWS. Without this permission block,
+# the AWS credentials step below fails — this is the single most common
+# thing people forget when setting up OIDC for the first time.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          # No access key, no secret key — this action exchanges the
+          # workflow's OIDC token for short-lived AWS credentials at
+          # runtime, scoped to exactly this job.
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        continue-on-error: true
+        # Doesn't fail the build over formatting — just a soft nudge.
+        # Fix locally anytime with `terraform fmt`.
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -no-color
+        # On a pull_request event, this step runs and shows you exactly
+        # what WOULD change — a review step before anything touches AWS.
+
+      # Apply ONLY runs on a direct push to main (i.e. after a PR is
+      # merged) — never on a pull_request event. This is the guardrail that
+      # keeps untrusted/unreviewed code from ever actually modifying your
+      # infrastructure.
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve -no-color

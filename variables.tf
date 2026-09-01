@@ -32,6 +32,12 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
+variable "github_repo" {
+  description = "GitHub repo allowed to assume the CI/CD IAM role, as owner/repo-name"
+  type        = string
+  default     = "monibrahman/aws-project-portfolio"
+}
+
 variable "db_instance_class" {
   description = "RDS instance size"
   type        = string
