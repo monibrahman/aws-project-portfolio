@@ -38,7 +38,15 @@ data "aws_iam_policy_document" "github_actions_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+      # As of July 2026, GitHub uses an "immutable subject claim" format for
+      # new repos: repo:OWNER@OWNER_ID/REPO@REPO_ID:ref:refs/heads/BRANCH
+      # (the numeric IDs are permanent and can't be reassigned if a
+      # username/repo name is ever recycled — a genuine security
+      # improvement over the old plain-name format). We use wildcards on
+      # the numeric ID portions since we only care about pinning down the
+      # BRANCH and the human-readable owner/repo names, not memorizing
+      # ever-stable-but-opaque numeric IDs by hand.
+      values = ["repo:${split("/", var.github_repo)[0]}@*/${split("/", var.github_repo)[1]}@*:ref:refs/heads/main"]
     }
   }
 }
