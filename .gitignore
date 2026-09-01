@@ -1,0 +1,14 @@
+# Terraform local state and cache — contains resource details, sometimes
+# sensitive values. Never commit this.
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Any file matching this pattern is assumed to hold secrets/local overrides
+*.tfvars
+!*.tfvars.example
+
+# Editor/OS cruft
+.DS_Store
+.vscode/
